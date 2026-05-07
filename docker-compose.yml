@@ -1,0 +1,158 @@
+services:
+  frontend-angular:
+    build: ./itd.siit.ui
+    container_name: frontend-angular
+    ports:
+      - "4200:80"
+    depends_on:
+      - api-nest
+    networks:
+      - frontend-net
+      - backend-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  api-nest:
+    build: ./api-personal
+    container_name: api-nest
+    ports:
+      - "3000:3000"   # 🔥 cambio aquí
+    depends_on:
+      - postgres-nest
+    env_file:
+      - .env
+    networks:
+      - backend-net
+    mem_limit: 512m
+    cpus: 0.75
+    restart: unless-stopped
+
+  api-dotnet:
+    build: ./Documentos.API
+    container_name: api-dotnet
+    ports:
+      - "5000:8080"   # 🔥 cambio aquí
+    depends_on:
+      - postgres-dotnet
+    env_file:
+      - .env
+    networks:
+      - backend-net
+    mem_limit: 512m
+    cpus: 0.75
+    restart: unless-stopped
+
+  cron-worker:
+    build: ./cron-worker
+    container_name: cron-worker
+    depends_on:
+      - postgres-nest
+    env_file:
+      - .env
+    networks:
+      - backend-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+  postgres-nest:
+    image: postgres:17
+    container_name: postgres-nest
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: sistema_academico
+    volumes:
+      - postgres-nest-data:/var/lib/postgresql/data
+      - ./postgres-init:/docker-entrypoint-initdb.d:ro
+      - ./postgres-master-config/postgresql.conf:/etc/postgresql/postgresql.conf:ro
+      - ./postgres-master-config/pg_hba.conf:/etc/postgresql/pg_hba.conf:ro
+    command: >
+      postgres
+      -c config_file=/etc/postgresql/postgresql.conf
+      -c hba_file=/etc/postgresql/pg_hba.conf
+    networks:
+      - backend-net
+    mem_limit: 1g
+    cpus: 1.0
+    restart: unless-stopped
+
+  postgres-dotnet:
+    image: postgres:17
+    container_name: postgres-dotnet
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      POSTGRES_DB: db_documentos
+    volumes:
+      - postgres-dotnet-data:/var/lib/postgresql/data
+      - ./postgres-dotnet-init:/docker-entrypoint-initdb.d:ro
+    networks:
+      - backend-net
+    mem_limit: 1g
+    cpus: 1.0
+    restart: unless-stopped
+
+  postgres-replica:
+    image: postgres:17
+    container_name: postgres-replica
+    user: postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+      PGPASSWORD: ${REPLICA_PASSWORD}
+    depends_on:
+      - postgres-nest
+    volumes:
+      - postgres-replica-data:/var/lib/postgresql/data
+    command: >
+      bash -c '
+        if [ -z "$(ls -A /var/lib/postgresql/data 2>/dev/null)" ]; then
+          until pg_basebackup -h postgres-nest -D /var/lib/postgresql/data -U replicator -Fp -Xs -P -R -C -S replica_slot;
+          do
+            echo "Waiting for primary...";
+            sleep 2;
+          done;
+          chmod 700 /var/lib/postgresql/data;
+        fi;
+        exec postgres
+      '
+    networks:
+      - backend-net
+    mem_limit: 1g
+    cpus: 1.0
+    restart: unless-stopped
+
+  pgadmin:
+    image: dpage/pgadmin4
+    container_name: pgadmin
+    environment:
+      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_EMAIL}
+      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_PASSWORD}
+    ports:
+      - "127.0.0.1:5050:80"   # 🔒 esto sí se queda cerrado
+    depends_on:
+      - postgres-nest
+      - postgres-dotnet
+      - postgres-replica
+    volumes:
+      - pgadmin-data:/var/lib/pgadmin
+    networks:
+      - backend-net
+    mem_limit: 256m
+    cpus: 0.5
+    restart: unless-stopped
+
+volumes:
+  postgres-nest-data:
+  postgres-dotnet-data:
+  postgres-replica-data:
+  pgadmin-data:
+
+networks:
+  frontend-net:
+    driver: bridge
+
+  backend-net:
+    driver: bridge

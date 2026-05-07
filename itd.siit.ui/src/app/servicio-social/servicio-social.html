@@ -1,0 +1,22 @@
+<div class="container">
+  <h1>Módulo de Servicio Social v2</h1>
+  <hr>
+
+  <div *ngIf="rolUsuario === 'Alumno'">
+    <h3>Panel del Alumno</h3>
+    <p>Aquí puedes subir tus reportes de Servicio Social.</p>
+    <button>Subir Reporte Bimestral</button>
+  </div>
+
+  <div *ngIf="rolUsuario === 'Admin'">
+    <h3>Panel de Administrador</h3>
+    <p>Lista de alumnos pendientes de revisión.</p>
+    <button>Validar Documentos</button>
+  </div>
+
+  <div *ngIf="rolUsuario === 'SAdmin'">
+    <h3>Panel de Super Usuario</h3>
+    <p>Configuración global del sistema de SS.</p>
+    <button class="danger">Configurar Periodos</button>
+  </div>
+</div>

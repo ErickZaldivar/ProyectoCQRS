@@ -1,0 +1,92 @@
+<div class="login-screen">
+  <div class="bg-pattern"></div>
+
+  <div class="login-container">
+    <div class="welcome-section">
+      <div class="logo-box">
+        <span class="logo-text">SIIT</span>
+      </div>
+      <h1>Bienvenido</h1>
+      <p></p>
+    </div>
+
+    <div class="login-card">
+      <div class="card-header">
+        <h2>Iniciar Sesión</h2>
+        <p>Ingresa tu número de control para acceder al sistema</p>
+      </div>
+
+      <form (ngSubmit)="handleSubmit()" class="login-form">
+
+        <div *ngIf="errorMessage" class="error-message">
+          <span class="error-icon">⚠️</span>
+          <div class="error-text">
+            <strong>Error:</strong> {{ errorMessage }}
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="no_control">Número de Control</label>
+          <div class="input-wrapper">
+            <lucide-icon [name]="Mail" class="icon-left"></lucide-icon>
+
+            <input 
+              type="text"
+              id="no_control"
+              name="no_control"
+              [(ngModel)]="no_control"
+              placeholder="12345678"
+              [disabled]="isLoading"
+              (input)="onInputChange()"
+              required>
+          </div>
+        </div>
+
+        <div class="input-group">
+          <label for="nip">NIP</label>
+          <div class="input-wrapper">
+            <lucide-icon [name]="Lock" class="icon-left"></lucide-icon>
+
+            <input 
+              [type]="showPassword ? 'text' : 'password'"
+              id="nip"
+              name="nip"
+              [(ngModel)]="nip"
+              placeholder="••••"
+              [disabled]="isLoading"
+              (input)="onInputChange()"
+              required>
+
+            <button 
+              type="button" 
+              class="btn-eye" 
+              (click)="showPassword = !showPassword">
+
+              <lucide-icon [name]="showPassword ? EyeOff : Eye"></lucide-icon>
+
+            </button>
+
+          </div>
+        </div>
+
+        <button type="submit" class="btn-submit" [disabled]="isLoading">
+
+          <span *ngIf="!isLoading">
+            Iniciar Sesión
+          </span>
+
+          <span *ngIf="isLoading" class="loader-flex">
+            <lucide-icon [name]="Loader2" class="spin"></lucide-icon>
+            Iniciando sesión...
+          </span>
+
+        </button>
+
+      </form>
+    </div>
+
+    <footer class="login-footer">
+      <p>© 2026 SIT</p>
+    </footer>
+  </div>
+</div>

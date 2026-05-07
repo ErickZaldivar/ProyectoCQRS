@@ -1,0 +1,176 @@
+<div class="admin-container">
+
+  <!-- LOGIN -->
+  <div *ngIf="!sesionIniciada" class="login-wrapper">
+    <div class="login-card">
+      <div class="login-logo">
+        <span class="logo-text">SIIT</span>
+        <p class="login-subtitle">Panel Administrativo</p>
+      </div>
+
+      <div class="login-form">
+        <div class="form-group">
+          <label>Usuario</label>
+          <input
+            type="text"
+            [(ngModel)]="credenciales.usuario"
+            placeholder="Usuario"
+            class="form-input"
+            (keyup.enter)="login()">
+        </div>
+
+        <div class="form-group">
+          <label>Contraseña</label>
+          <input
+            type="password"
+            [(ngModel)]="credenciales.password"
+            placeholder="••••••••"
+            class="form-input"
+            (keyup.enter)="login()">
+        </div>
+
+        <p *ngIf="loginError" class="login-error">{{ loginError }}</p>
+
+        <button class="btn-login" (click)="login()">
+          Iniciar Sesión
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- PANEL PRINCIPAL -->
+  <div *ngIf="sesionIniciada" class="panel-wrapper">
+
+    <!-- NAVBAR -->
+    <nav class="admin-navbar">
+      <div class="navbar-brand">
+        <span class="logo-text">SIIT</span>
+        <span class="navbar-title">Panel Administrativo</span>
+      </div>
+      <button class="btn-logout" (click)="salir()">Cerrar Sesión</button>
+    </nav>
+
+    <!-- CONTENIDO -->
+    <main class="panel-content">
+      <div class="content-header">
+        <h1>Documentos por Alumno</h1>
+        <p>Revisa el estatus de documentación de cada alumno registrado.</p>
+      </div>
+
+      <!-- CARGANDO -->
+      <div *ngIf="cargando" class="estado-carga">
+        Cargando documentos...
+      </div>
+
+      <!-- ERROR -->
+      <div *ngIf="errorCarga" class="estado-error">
+        {{ errorCarga }}
+      </div>
+
+      <!-- SIN REGISTROS -->
+      <div *ngIf="!cargando && !errorCarga && documentos.length === 0" class="estado-vacio">
+        No hay registros de documentos aún.
+      </div>
+
+      <!-- TARJETAS -->
+      <div *ngIf="!cargando && documentos.length > 0" class="tarjetas-grid">
+
+        <div
+          *ngFor="let doc of documentos"
+          class="alumno-card"
+          [class.card-completa]="documentosCompletos(doc)"
+          [class.card-incompleta]="!documentosCompletos(doc)">
+
+          <!-- HEADER TARJETA -->
+          <div class="card-header">
+            <div class="alumno-avatar">
+              {{ doc.id_alumno_academico }}
+            </div>
+            <div class="alumno-info">
+              <h3>Alumno #{{ doc.id_alumno_academico }}</h3>
+              <span class="plan-badge">Plan de trabajo: {{ doc.id_plan_trabajo }}</span>
+            </div>
+            <div class="estatus-badge"
+              [class.completo]="documentosCompletos(doc)"
+              [class.incompleto]="!documentosCompletos(doc)">
+              {{ documentosCompletos(doc) ? '✅ Completo' : '⚠️ Incompleto' }}
+            </div>
+          </div>
+
+          <!-- PROGRESO -->
+          <div class="card-progreso">
+            <span class="progreso-texto">{{ contarDocumentos(doc) }} de 4 documentos</span>
+            <div class="barra-progreso">
+              <div
+                class="barra-fill"
+                [style.width.%]="(contarDocumentos(doc) / 4) * 100"
+                [class.barra-completa]="documentosCompletos(doc)">
+              </div>
+            </div>
+          </div>
+
+          <!-- DOCUMENTOS -->
+          <div class="card-documentos">
+
+            <div class="doc-item"
+              [class.doc-disponible]="doc.carta_presentacion"
+              [class.doc-faltante]="!doc.carta_presentacion">
+              <span class="doc-icon">{{ doc.carta_presentacion ? '📄' : '❌' }}</span>
+              <span class="doc-nombre">Carta Presentación</span>
+              <button
+                *ngIf="doc.carta_presentacion"
+                class="btn-ver"
+                (click)="verDocumento('ver-carta-presentacion', doc.id)">
+                Ver
+              </button>
+              <span *ngIf="!doc.carta_presentacion" class="doc-pendiente">Pendiente</span>
+            </div>
+
+            <div class="doc-item"
+              [class.doc-disponible]="doc.carta_compromiso"
+              [class.doc-faltante]="!doc.carta_compromiso">
+              <span class="doc-icon">{{ doc.carta_compromiso ? '📄' : '❌' }}</span>
+              <span class="doc-nombre">Carta Compromiso</span>
+              <button
+                *ngIf="doc.carta_compromiso"
+                class="btn-ver"
+                (click)="verDocumento('ver-carta-compromiso', doc.id)">
+                Ver
+              </button>
+              <span *ngIf="!doc.carta_compromiso" class="doc-pendiente">Pendiente</span>
+            </div>
+
+            <div class="doc-item"
+              [class.doc-disponible]="doc.carta_aceptacion"
+              [class.doc-faltante]="!doc.carta_aceptacion">
+              <span class="doc-icon">{{ doc.carta_aceptacion ? '📄' : '❌' }}</span>
+              <span class="doc-nombre">Carta Aceptación</span>
+              <button
+                *ngIf="doc.carta_aceptacion"
+                class="btn-ver"
+                (click)="verDocumento('ver-carta-aceptacion', doc.id)">
+                Ver
+              </button>
+              <span *ngIf="!doc.carta_aceptacion" class="doc-pendiente">Pendiente</span>
+            </div>
+
+            <div class="doc-item"
+              [class.doc-disponible]="doc.seguro_facultativo"
+              [class.doc-faltante]="!doc.seguro_facultativo">
+              <span class="doc-icon">{{ doc.seguro_facultativo ? '📄' : '❌' }}</span>
+              <span class="doc-nombre">Seguro Facultativo</span>
+              <button
+                *ngIf="doc.seguro_facultativo"
+                class="btn-ver"
+                (click)="verDocumento('ver-seguro-facultativo', doc.id)">
+                Ver
+              </button>
+              <span *ngIf="!doc.seguro_facultativo" class="doc-pendiente">Pendiente</span>
+            </div>
+
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>

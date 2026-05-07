@@ -1,0 +1,45 @@
+<div class="main-container">
+  <header class="header-guinda">
+    <div class="logo-area">
+      <span class="logo-v2">SIT v2</span> | Residencias
+    </div>
+    <button (click)="salir()" class="btn-logout">Cerrar Sesión</button>
+  </header>
+
+  <div class="content">
+    <div class="welcome-box">
+      <p>Bienvenido, <strong>{{ nombreUsuario }}</strong></p>
+      <div class="badge-rol">Nivel de Acceso: {{ rolActual }}</div>
+    </div>
+
+    <div class="grid-menu">
+      <div class="card" *ngIf="rolActual === 'Alumno'">
+        <div class="card-icon">📁</div>
+        <h3>Portal de Alumno</h3>
+        <p>Gestiona tu anteproyecto y reportes parciales.</p>
+        <button class="btn-guinda">Mis Documentos</button>
+      </div>
+
+      <div class="card" *ngIf="rolActual === 'Asesor Interno' || rolActual === 'Admin'">
+        <div class="card-icon">⚖️</div>
+        <h3>Asesoría Interna</h3>
+        <p>Revisión y seguimiento de proyectos asignados.</p>
+        <button class="btn-guinda">Calificar Reportes</button>
+      </div>
+
+      <div class="card" *ngIf="rolActual === 'Admin' || rolActual === 'SuperAdmin'">
+        <div class="card-icon">⚙️</div>
+        <h3>Administración</h3>
+        <p>Control de empresas, vacantes y periodos.</p>
+        <button class="btn-guinda">Panel de Control</button>
+      </div>
+
+      <div class="card special" *ngIf="rolActual === 'SuperAdmin'">
+        <div class="card-icon"></div>
+        <h3>Super Usuario</h3>
+        <p>Configuración maestra de la base de datos v2.</p>
+        <button class="btn-gold">Configuración Global</button>
+      </div>
+    </div>
+  </div>
+</div>

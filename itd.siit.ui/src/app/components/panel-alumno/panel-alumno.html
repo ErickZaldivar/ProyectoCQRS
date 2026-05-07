@@ -1,0 +1,419 @@
+<div class="panel-container">
+  <!-- Top Navigation -->
+  <nav class="top-navbar">
+    <div class="navbar-left">
+      <div class="logo-section">
+        <span class="logo-img"></span>
+        <span class="logo-text">SIIT</span>
+      </div>
+    </div>
+
+    <ul class="nav-menu">
+      <li><button (click)="cambiarSeccion('inicio')" class="nav-item" [class.active]="seccionActual === 'inicio'">Inicio</button></li>
+      <li><button (click)="cambiarSeccion('estatus')" class="nav-item" [class.active]="seccionActual === 'estatus'">Perfil</button></li>
+      <li><button (click)="cambiarSeccion('programas')" class="nav-item" [class.active]="seccionActual === 'programas'">Servicio Social</button></li>
+      <li><button (click)="cambiarSeccion('inscripciones')" class="nav-item" [class.active]="seccionActual === 'inscripciones'">Residencia Profesional</button></li>
+      <li><button (click)="cambiarSeccion('documentacion')" class="nav-item" [class.active]="seccionActual === 'documentacion'">Documentación</button></li>
+      <li><button (click)="cambiarSeccion('configuracion')" class="nav-item" [class.active]="seccionActual === 'configuracion'">Configuración</button></li>
+    </ul>
+
+    <div class="navbar-right">
+      <button class="logout-btn" (click)="salir()">Cerrar Sesión</button>
+    </div>
+  </nav>
+
+  <!-- Main Content -->
+  <main class="main-content">
+    <header class="content-header">
+      <div class="header-left">
+        <h1 class="header-title">{{ getTituloHeader() }}</h1>
+      </div>
+
+      <div class="header-center">
+        <div class="search-box">
+          <input type="text" placeholder="Buscar..." class="search-input">
+        </div>
+      </div>
+
+      <div class="header-right">
+        <div class="user-profile">
+          <div class="user-avatar">👤</div>
+          <div class="user-details">
+            <p class="user-name">{{ nombreAlumno }}</p>
+            <span class="user-type">Estudiante</span>
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="content-area">
+
+      <!-- INICIO -->
+      <div *ngIf="seccionActual === 'inicio'" class="inicio-container">
+        <div class="dashboard-top">
+          <div class="welcome-card">
+            <div class="welcome-header">
+              <div>
+                <span class="status-chip pending">Pendiente</span>
+
+                <h2>Bienvenido, {{ nombreAlumno }}</h2>
+
+                <p class="welcome-subtitle">
+                  {{ datosAlumno.carrera || 'Ing. en Sistemas' }} •
+                  {{ datosAlumno.semestre ? datosAlumno.semestre + 'º semestre' : 'Semestre' }}
+                </p>
+              </div>
+
+              <div class="welcome-avatar">
+                {{ nombreAlumno ? nombreAlumno.charAt(0) : 'A' }}
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- DOCUMENTACION -->
+      <div *ngIf="seccionActual === 'documentacion'" class="documentacion-container">
+
+        <div class="documentacion-header">
+          <h2>Subida de Documentos</h2>
+          <p>Adjunta tus archivos en formato PDF para continuar con tu trámite.</p>
+        </div>
+
+        <!-- CAMPO ID PROGRAMA -->
+        <div class="campo-programa">
+          <label for="id_programa">
+            ID del Programa <span class="requerido">*</span>
+          </label>
+
+          <input
+            id="id_programa"
+            type="number"
+            placeholder="Ingresa el ID de tu programa"
+            [(ngModel)]="id_plan_trabajo"
+            [disabled]="!!documentosExistentes"
+            class="input-programa"
+            min="1">
+
+          <small *ngIf="documentosExistentes" class="info-programa">
+            Programa registrado:
+            <strong>{{ documentosExistentes.id_plan_trabajo }}</strong>
+          </small>
+
+          <small *ngIf="!documentosExistentes" class="hint-programa">
+            Ingresa el ID del programa al que perteneces antes de subir tus documentos.
+          </small>
+        </div>
+
+        <!-- Indicador de carga -->
+        <div *ngIf="cargandoDocumentos" class="cargando-docs">
+          Verificando documentos existentes...
+        </div>
+
+        <div *ngIf="!cargandoDocumentos" class="documentos-grid">
+
+          <!-- Carta Presentación -->
+          <div
+            class="documento-card"
+            [class.documento-cargado]="documentoYaCargado('carta_presentacion')">
+
+            <div class="documento-status">
+              <label>Carta Presentación</label>
+
+              <span
+                *ngIf="documentoYaCargado('carta_presentacion')"
+                class="badge-cargado">
+                ✅ Ya cargado
+              </span>
+
+              <span
+                *ngIf="!documentoYaCargado('carta_presentacion')"
+                class="badge-pendiente">
+                ⏳ Pendiente
+              </span>
+            </div>
+
+            <!-- Acciones cuando ya está cargado -->
+            <div
+              *ngIf="documentoYaCargado('carta_presentacion')"
+              class="documento-acciones">
+
+              <button
+                class="btn-ver-doc"
+                (click)="verDocumento('carta_presentacion', 'Carta de Presentación')">
+                👁️ Ver
+              </button>
+
+              <button
+                class="btn-eliminar-campo"
+                (click)="eliminarCampoDocumento('carta_presentacion')"
+                [disabled]="campoBorrandose === 'carta_presentacion'">
+
+                {{ campoBorrandose === 'carta_presentacion'
+                  ? '⏳ Eliminando...'
+                  : '🗑️ Eliminar' }}
+              </button>
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              (change)="seleccionarArchivo($event, 'carta_presentacion')">
+
+            <small *ngIf="documentoYaCargado('carta_presentacion')">
+              Puedes subir un nuevo archivo para reemplazarlo.
+            </small>
+          </div>
+
+          <!-- Carta Compromiso -->
+          <div
+            class="documento-card"
+            [class.documento-cargado]="documentoYaCargado('carta_compromiso')">
+
+            <div class="documento-status">
+              <label>Carta Compromiso</label>
+
+              <span
+                *ngIf="documentoYaCargado('carta_compromiso')"
+                class="badge-cargado">
+                ✅ Ya cargado
+              </span>
+
+              <span
+                *ngIf="!documentoYaCargado('carta_compromiso')"
+                class="badge-pendiente">
+                ⏳ Pendiente
+              </span>
+            </div>
+
+            <div
+              *ngIf="documentoYaCargado('carta_compromiso')"
+              class="documento-acciones">
+
+              <button
+                class="btn-ver-doc"
+                (click)="verDocumento('carta_compromiso', 'Carta de Compromiso')">
+                👁️ Ver
+              </button>
+
+              <button
+                class="btn-eliminar-campo"
+                (click)="eliminarCampoDocumento('carta_compromiso')"
+                [disabled]="campoBorrandose === 'carta_compromiso'">
+
+                {{ campoBorrandose === 'carta_compromiso'
+                  ? '⏳ Eliminando...'
+                  : '🗑️ Eliminar' }}
+              </button>
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              (change)="seleccionarArchivo($event, 'carta_compromiso')">
+
+            <small *ngIf="documentoYaCargado('carta_compromiso')">
+              Puedes subir un nuevo archivo para reemplazarlo.
+            </small>
+          </div>
+
+          <!-- Carta Aceptación -->
+          <div
+            class="documento-card"
+            [class.documento-cargado]="documentoYaCargado('carta_aceptacion')">
+
+            <div class="documento-status">
+              <label>Carta Aceptación</label>
+
+              <span
+                *ngIf="documentoYaCargado('carta_aceptacion')"
+                class="badge-cargado">
+                ✅ Ya cargado
+              </span>
+
+              <span
+                *ngIf="!documentoYaCargado('carta_aceptacion')"
+                class="badge-pendiente">
+                ⏳ Pendiente
+              </span>
+            </div>
+
+            <div
+              *ngIf="documentoYaCargado('carta_aceptacion')"
+              class="documento-acciones">
+
+              <button
+                class="btn-ver-doc"
+                (click)="verDocumento('carta_aceptacion', 'Carta de Aceptación')">
+                👁️ Ver
+              </button>
+
+              <button
+                class="btn-eliminar-campo"
+                (click)="eliminarCampoDocumento('carta_aceptacion')"
+                [disabled]="campoBorrandose === 'carta_aceptacion'">
+
+                {{ campoBorrandose === 'carta_aceptacion'
+                  ? '⏳ Eliminando...'
+                  : '🗑️ Eliminar' }}
+              </button>
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              (change)="seleccionarArchivo($event, 'carta_aceptacion')">
+
+            <small *ngIf="documentoYaCargado('carta_aceptacion')">
+              Puedes subir un nuevo archivo para reemplazarlo.
+            </small>
+          </div>
+
+          <!-- Seguro Facultativo -->
+          <div
+            class="documento-card"
+            [class.documento-cargado]="documentoYaCargado('seguro_facultativo')">
+
+            <div class="documento-status">
+              <label>Seguro Facultativo</label>
+
+              <span
+                *ngIf="documentoYaCargado('seguro_facultativo')"
+                class="badge-cargado">
+                ✅ Ya cargado
+              </span>
+
+              <span
+                *ngIf="!documentoYaCargado('seguro_facultativo')"
+                class="badge-pendiente">
+                ⏳ Pendiente
+              </span>
+            </div>
+
+            <div
+              *ngIf="documentoYaCargado('seguro_facultativo')"
+              class="documento-acciones">
+
+              <button
+                class="btn-ver-doc"
+                (click)="verDocumento('seguro_facultativo', 'Seguro Facultativo')">
+                👁️ Ver
+              </button>
+
+              <button
+                class="btn-eliminar-campo"
+                (click)="eliminarCampoDocumento('seguro_facultativo')"
+                [disabled]="campoBorrandose === 'seguro_facultativo'">
+
+                {{ campoBorrandose === 'seguro_facultativo'
+                  ? '⏳ Eliminando...'
+                  : '🗑️ Eliminar' }}
+              </button>
+            </div>
+
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx"
+              (change)="seleccionarArchivo($event, 'seguro_facultativo')">
+
+            <small *ngIf="documentoYaCargado('seguro_facultativo')">
+              Puedes subir un nuevo archivo para reemplazarlo.
+            </small>
+          </div>
+
+        </div>
+
+        <!-- Botón enviar/actualizar -->
+        <div class="acciones-documentos">
+          <button
+            class="btn-subir-documentos"
+            (click)="subir()"
+            [disabled]="cargandoDocumentos || !id_plan_trabajo">
+
+            {{ documentosExistentes
+              ? 'Actualizar Documentos'
+              : 'Enviar Documentos' }}
+          </button>
+        </div>
+
+      </div>
+
+      <!-- CONFIGURACION -->
+      <div
+        *ngIf="seccionActual === 'configuracion'"
+        class="configuracion-container">
+
+        <div class="configuracion-header">
+          <h2>Configuración</h2>
+        </div>
+
+        <div class="seccion-config">
+          <h3 class="seccion-titulo">Perfil</h3>
+
+          <div class="datos-perfil">
+
+            <div class="dato-item">
+              <label>Nombre Completo</label>
+              <p>{{ datosAlumno.nombre_completo }}</p>
+            </div>
+
+            <div class="dato-item">
+              <label>No. Control</label>
+              <p>{{ datosAlumno.no_control }}</p>
+            </div>
+
+            <div class="dato-item">
+              <label>Correo Institucional</label>
+              <p>{{ datosAlumno.correo_institucional }}</p>
+            </div>
+
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </main>
+</div>
+
+<!-- MODAL VISTA PREVIA DE DOCUMENTO -->
+<div
+  *ngIf="documentoEnVistaPrevia || cargandoVistaPrevia"
+  class="modal-overlay"
+  (click)="cerrarVistaPrevia()">
+
+  <div
+    class="modal-visor"
+    (click)="$event.stopPropagation()">
+
+    <div class="modal-header">
+      <h3>{{ tituloVistaPrevia }}</h3>
+
+      <button
+        class="modal-cerrar"
+        (click)="cerrarVistaPrevia()">
+        ✕
+      </button>
+    </div>
+
+    <div class="modal-body">
+
+      <div
+        *ngIf="cargandoVistaPrevia"
+        class="modal-cargando">
+
+        <span>Cargando documento...</span>
+      </div>
+
+      <iframe
+        *ngIf="documentoEnVistaPrevia && !cargandoVistaPrevia"
+        [src]="documentoEnVistaPrevia"
+        class="modal-iframe"
+        type="application/pdf"
+        width="100%"
+        height="100%"
+        frameborder="0">
+      </iframe>
+
+    </div>
+  </div>
+</div>
