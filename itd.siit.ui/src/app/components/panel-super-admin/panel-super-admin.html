@@ -4,6 +4,7 @@
   <div *ngIf="!sesionIniciada" class="login-wrapper">
     <div class="login-card">
       <div class="login-logo">
+        <span class="logo-img"></span>
         <span class="logo-text">SIIT</span>
         <p class="login-subtitle">Panel Administrativo</p>
       </div>
@@ -31,145 +32,450 @@
 
         <p *ngIf="loginError" class="login-error">{{ loginError }}</p>
 
-        <button class="btn-login" (click)="login()">
-          Iniciar Sesión
-        </button>
+        <button class="btn-login" (click)="login()">Iniciar Sesión</button>
       </div>
     </div>
   </div>
 
   <!-- PANEL PRINCIPAL -->
-  <div *ngIf="sesionIniciada" class="panel-wrapper">
+  <div *ngIf="sesionIniciada" class="panel-container">
 
-    <!-- NAVBAR -->
-    <nav class="admin-navbar">
-      <div class="navbar-brand">
-        <span class="logo-text">SIIT</span>
-        <span class="navbar-title">Panel Administrativo</span>
+    <!-- Top Navigation -->
+    <nav class="top-navbar">
+      <div class="navbar-left">
+        <div class="logo-section">
+          <span class="logo-img"></span>
+          <span class="logo-text">SIIT</span>
+        </div>
       </div>
-      <button class="btn-logout" (click)="salir()">Cerrar Sesión</button>
+
+      <ul class="nav-menu">
+        <li>
+          <button (click)="cambiarSeccion('inicio')" class="nav-item"
+            [class.active]="seccionActual === 'inicio'">Inicio</button>
+        </li>
+        <li>
+          <button (click)="cambiarSeccion('documentacion')" class="nav-item"
+            [class.active]="seccionActual === 'documentacion'">Documentación</button>
+        </li>
+        <li>
+          <button (click)="cambiarSeccion('organizaciones')" class="nav-item"
+            [class.active]="seccionActual === 'organizaciones'">Organizaciones</button>
+        </li>
+        <li>
+          <button (click)="cambiarSeccion('programas')" class="nav-item"
+            [class.active]="seccionActual === 'programas'">Programas</button>
+        </li>
+      </ul>
+
+      <div class="navbar-right">
+        <button class="logout-btn" (click)="salir()">Cerrar Sesión</button>
+      </div>
     </nav>
 
-    <!-- CONTENIDO -->
-    <main class="panel-content">
-      <div class="content-header">
-        <h1>Documentos por Alumno</h1>
-        <p>Revisa el estatus de documentación de cada alumno registrado.</p>
-      </div>
-
-      <!-- CARGANDO -->
-      <div *ngIf="cargando" class="estado-carga">
-        Cargando documentos...
-      </div>
-
-      <!-- ERROR -->
-      <div *ngIf="errorCarga" class="estado-error">
-        {{ errorCarga }}
-      </div>
-
-      <!-- SIN REGISTROS -->
-      <div *ngIf="!cargando && !errorCarga && documentos.length === 0" class="estado-vacio">
-        No hay registros de documentos aún.
-      </div>
-
-      <!-- TARJETAS -->
-      <div *ngIf="!cargando && documentos.length > 0" class="tarjetas-grid">
-
-        <div
-          *ngFor="let doc of documentos"
-          class="alumno-card"
-          [class.card-completa]="documentosCompletos(doc)"
-          [class.card-incompleta]="!documentosCompletos(doc)">
-
-          <!-- HEADER TARJETA -->
-          <div class="card-header">
-            <div class="alumno-avatar">
-              {{ doc.id_alumno_academico }}
-            </div>
-            <div class="alumno-info">
-              <h3>Alumno #{{ doc.id_alumno_academico }}</h3>
-              <span class="plan-badge">Plan de trabajo: {{ doc.id_plan_trabajo }}</span>
-            </div>
-            <div class="estatus-badge"
-              [class.completo]="documentosCompletos(doc)"
-              [class.incompleto]="!documentosCompletos(doc)">
-              {{ documentosCompletos(doc) ? '✅ Completo' : '⚠️ Incompleto' }}
+    <!-- Main Content -->
+    <main class="main-content">
+      <header class="content-header">
+        <div class="header-left">
+          <h1 class="header-title">{{ getTituloHeader() }}</h1>
+        </div>
+        <div class="header-center">
+          <div class="search-box">
+            <input type="text" placeholder="Buscar..." class="search-input">
+          </div>
+        </div>
+        <div class="header-right">
+          <div class="user-profile">
+            <div class="user-avatar">🛡️</div>
+            <div class="user-details">
+              <p class="user-name">Administrador</p>
+              <span class="user-type">Admin</span>
             </div>
           </div>
+        </div>
+      </header>
 
-          <!-- PROGRESO -->
-          <div class="card-progreso">
-            <span class="progreso-texto">{{ contarDocumentos(doc) }} de 4 documentos</span>
-            <div class="barra-progreso">
-              <div
-                class="barra-fill"
-                [style.width.%]="(contarDocumentos(doc) / 4) * 100"
-                [class.barra-completa]="documentosCompletos(doc)">
+      <div class="content-area">
+
+        <!-- ====== INICIO ====== -->
+        <div *ngIf="seccionActual === 'inicio'" class="inicio-container">
+          <div class="dashboard-top">
+            <div class="welcome-card">
+              <div class="welcome-header">
+                <div>
+                  <span class="status-chip admin">Administrador</span>
+                  <h2>Bienvenido, Administrador</h2>
+                  <p class="welcome-subtitle">Panel de control · SIIT</p>
+                </div>
+                <div class="welcome-avatar">A</div>
               </div>
             </div>
           </div>
 
-          <!-- DOCUMENTOS -->
-          <div class="card-documentos">
-
-            <div class="doc-item"
-              [class.doc-disponible]="doc.carta_presentacion"
-              [class.doc-faltante]="!doc.carta_presentacion">
-              <span class="doc-icon">{{ doc.carta_presentacion ? '📄' : '❌' }}</span>
-              <span class="doc-nombre">Carta Presentación</span>
-              <button
-                *ngIf="doc.carta_presentacion"
-                class="btn-ver"
-                (click)="verDocumento('ver-carta-presentacion', doc.id)">
-                Ver
-              </button>
-              <span *ngIf="!doc.carta_presentacion" class="doc-pendiente">Pendiente</span>
+          <div class="resumen-grid">
+            <div class="resumen-card">
+              <span class="resumen-icon">📄</span>
+              <div class="resumen-info">
+                <p class="resumen-numero">{{ documentos.length }}</p>
+                <p class="resumen-label">Expedientes registrados</p>
+              </div>
             </div>
-
-            <div class="doc-item"
-              [class.doc-disponible]="doc.carta_compromiso"
-              [class.doc-faltante]="!doc.carta_compromiso">
-              <span class="doc-icon">{{ doc.carta_compromiso ? '📄' : '❌' }}</span>
-              <span class="doc-nombre">Carta Compromiso</span>
-              <button
-                *ngIf="doc.carta_compromiso"
-                class="btn-ver"
-                (click)="verDocumento('ver-carta-compromiso', doc.id)">
-                Ver
-              </button>
-              <span *ngIf="!doc.carta_compromiso" class="doc-pendiente">Pendiente</span>
+            <div class="resumen-card">
+              <span class="resumen-icon">✅</span>
+              <div class="resumen-info">
+                <p class="resumen-numero">{{ contarAlumnosCompletos() }}</p>
+                <p class="resumen-label">Expedientes completos</p>
+              </div>
             </div>
-
-            <div class="doc-item"
-              [class.doc-disponible]="doc.carta_aceptacion"
-              [class.doc-faltante]="!doc.carta_aceptacion">
-              <span class="doc-icon">{{ doc.carta_aceptacion ? '📄' : '❌' }}</span>
-              <span class="doc-nombre">Carta Aceptación</span>
-              <button
-                *ngIf="doc.carta_aceptacion"
-                class="btn-ver"
-                (click)="verDocumento('ver-carta-aceptacion', doc.id)">
-                Ver
-              </button>
-              <span *ngIf="!doc.carta_aceptacion" class="doc-pendiente">Pendiente</span>
+            <div class="resumen-card">
+              <span class="resumen-icon">🏢</span>
+              <div class="resumen-info">
+                <p class="resumen-numero">{{ organizaciones.length }}</p>
+                <p class="resumen-label">Organizaciones registradas</p>
+              </div>
             </div>
-
-            <div class="doc-item"
-              [class.doc-disponible]="doc.seguro_facultativo"
-              [class.doc-faltante]="!doc.seguro_facultativo">
-              <span class="doc-icon">{{ doc.seguro_facultativo ? '📄' : '❌' }}</span>
-              <span class="doc-nombre">Seguro Facultativo</span>
-              <button
-                *ngIf="doc.seguro_facultativo"
-                class="btn-ver"
-                (click)="verDocumento('ver-seguro-facultativo', doc.id)">
-                Ver
-              </button>
-              <span *ngIf="!doc.seguro_facultativo" class="doc-pendiente">Pendiente</span>
+            <div class="resumen-card">
+              <span class="resumen-icon">📋</span>
+              <div class="resumen-info">
+                <p class="resumen-numero">{{ programas.length }}</p>
+                <p class="resumen-label">Programas registrados</p>
+              </div>
             </div>
-
           </div>
         </div>
+
+        <!-- ====== DOCUMENTACIÓN ====== -->
+        <div *ngIf="seccionActual === 'documentacion'" class="documentacion-container">
+
+          <div class="documentacion-header">
+            <h2>Documentos por Alumno</h2>
+            <p>Revisa el estatus de documentación de cada alumno registrado.</p>
+          </div>
+
+          <div *ngIf="cargando" class="cargando-docs">Cargando documentos...</div>
+          <div *ngIf="errorCarga" class="estado-error">{{ errorCarga }}</div>
+          <div *ngIf="!cargando && !errorCarga && documentos.length === 0" class="estado-vacio">
+            No hay registros de documentos aún.
+          </div>
+
+          <div *ngIf="!cargando && documentos.length > 0" class="tarjetas-grid">
+            <div
+              *ngFor="let doc of documentos"
+              class="alumno-card"
+              [class.card-completa]="documentosCompletos(doc)"
+              [class.card-incompleta]="!documentosCompletos(doc)">
+
+              <div class="card-header">
+                <div class="alumno-avatar">{{ doc.id_alumno_academico }}</div>
+                <div class="alumno-info">
+                  <h3>Alumno #{{ doc.id_alumno_academico }}</h3>
+                  <span class="plan-badge">Plan de trabajo: {{ doc.id_plan_trabajo }}</span>
+                </div>
+                <div class="estatus-badge"
+                  [class.completo]="documentosCompletos(doc)"
+                  [class.incompleto]="!documentosCompletos(doc)">
+                  {{ documentosCompletos(doc) ? '✅ Completo' : '⚠️ Incompleto' }}
+                </div>
+              </div>
+
+              <div class="card-progreso">
+                <span class="progreso-texto">{{ contarDocumentos(doc) }} de 4 documentos</span>
+                <div class="barra-progreso">
+                  <div
+                    class="barra-fill"
+                    [style.width.%]="(contarDocumentos(doc) / 4) * 100"
+                    [class.barra-completa]="documentosCompletos(doc)">
+                  </div>
+                </div>
+              </div>
+
+              <div class="card-documentos">
+                <div class="doc-item"
+                  [class.doc-disponible]="doc.carta_presentacion"
+                  [class.doc-faltante]="!doc.carta_presentacion">
+                  <span class="doc-icon">{{ doc.carta_presentacion ? '📄' : '❌' }}</span>
+                  <span class="doc-nombre">Carta Presentación</span>
+                  <button *ngIf="doc.carta_presentacion" class="btn-ver"
+                    (click)="verDocumento('ver-carta-presentacion', doc.id)">Ver</button>
+                  <span *ngIf="!doc.carta_presentacion" class="doc-pendiente">Pendiente</span>
+                </div>
+
+                <div class="doc-item"
+                  [class.doc-disponible]="doc.carta_compromiso"
+                  [class.doc-faltante]="!doc.carta_compromiso">
+                  <span class="doc-icon">{{ doc.carta_compromiso ? '📄' : '❌' }}</span>
+                  <span class="doc-nombre">Carta Compromiso</span>
+                  <button *ngIf="doc.carta_compromiso" class="btn-ver"
+                    (click)="verDocumento('ver-carta-compromiso', doc.id)">Ver</button>
+                  <span *ngIf="!doc.carta_compromiso" class="doc-pendiente">Pendiente</span>
+                </div>
+
+                <div class="doc-item"
+                  [class.doc-disponible]="doc.carta_aceptacion"
+                  [class.doc-faltante]="!doc.carta_aceptacion">
+                  <span class="doc-icon">{{ doc.carta_aceptacion ? '📄' : '❌' }}</span>
+                  <span class="doc-nombre">Carta Aceptación</span>
+                  <button *ngIf="doc.carta_aceptacion" class="btn-ver"
+                    (click)="verDocumento('ver-carta-aceptacion', doc.id)">Ver</button>
+                  <span *ngIf="!doc.carta_aceptacion" class="doc-pendiente">Pendiente</span>
+                </div>
+
+                <div class="doc-item"
+                  [class.doc-disponible]="doc.seguro_facultativo"
+                  [class.doc-faltante]="!doc.seguro_facultativo">
+                  <span class="doc-icon">{{ doc.seguro_facultativo ? '📄' : '❌' }}</span>
+                  <span class="doc-nombre">Seguro Facultativo</span>
+                  <button *ngIf="doc.seguro_facultativo" class="btn-ver"
+                    (click)="verDocumento('ver-seguro-facultativo', doc.id)">Ver</button>
+                  <span *ngIf="!doc.seguro_facultativo" class="doc-pendiente">Pendiente</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== ORGANIZACIONES ====== -->
+        <div *ngIf="seccionActual === 'organizaciones'" class="organizaciones-container">
+
+          <div class="seccion-header">
+            <h2>Organizaciones</h2>
+            <p>Gestiona las organizaciones disponibles para los programas de servicio social.</p>
+          </div>
+
+          <!-- FORMULARIO AGREGAR -->
+          <div class="form-card">
+            <h3 class="form-titulo">Agregar Organización</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre de la organización <span class="requerido">*</span></label>
+                <input
+                  type="text"
+                  [(ngModel)]="nuevaOrganizacion.nombre_organizacion"
+                  placeholder="Ej. Tech SA de CV"
+                  class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Nombre del titular</label>
+                <input
+                  type="text"
+                  [(ngModel)]="nuevaOrganizacion.nombre_titular_organizacion"
+                  placeholder="Ej. Juan José Hernández Pérez"
+                  class="form-input">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Puesto del titular</label>
+                <input
+                  type="text"
+                  [(ngModel)]="nuevaOrganizacion.puesto_titular_organizaciones"
+                  placeholder="Ej. Director General"
+                  class="form-input">
+              </div>
+            </div>
+
+            <p *ngIf="errorOrganizacion" class="form-error">{{ errorOrganizacion }}</p>
+            <p *ngIf="exitoOrganizacion" class="form-exito">{{ exitoOrganizacion }}</p>
+
+            <div class="form-acciones">
+              <button class="btn-agregar" (click)="agregarOrganizacion()" [disabled]="guardandoOrganizacion">
+                {{ guardandoOrganizacion ? 'Guardando...' : '+ Agregar Organización' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- LISTA -->
+          <div class="lista-header">
+            <h3>Organizaciones registradas</h3>
+          </div>
+
+          <div *ngIf="cargandoOrganizaciones" class="cargando-docs">Cargando organizaciones...</div>
+
+          <div *ngIf="!cargandoOrganizaciones && organizaciones.length === 0" class="estado-vacio">
+            No hay organizaciones registradas aún.
+          </div>
+
+          <div *ngIf="!cargandoOrganizaciones && organizaciones.length > 0" class="items-grid">
+            <div *ngFor="let org of organizaciones" class="item-card">
+              <div class="item-card-body">
+                <div class="item-icon">🏢</div>
+                <div class="item-info">
+                  <h4>{{ org.nombreOrganizacion }}</h4>
+                    <p *ngIf="org.nombreTitularOrganizacion" class="item-detalle">
+                      👤 {{ org.nombreTitularOrganizacion }}
+                    </p>
+                    <p *ngIf="org.puestoTitularOrganizaciones" class="item-detalle">
+                      💼 {{ org.puestoTitularOrganizaciones }}
+                    </p>
+                </div>
+              </div>
+              <div class="item-acciones">
+                <button
+                  class="btn-eliminar"
+                  (click)="eliminarOrganizacion(org.id)"
+                  [disabled]="eliminandoOrganizacion === org.id">
+                  {{ eliminandoOrganizacion === org.id ? '⏳ Eliminando...' : '🗑️ Eliminar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ====== PROGRAMAS ====== -->
+        <div *ngIf="seccionActual === 'programas'" class="programas-container">
+
+          <div class="seccion-header">
+            <h2>Programas de Servicio Social</h2>
+            <p>Administra los programas disponibles para los alumnos.</p>
+          </div>
+
+          <!-- FORMULARIO AGREGAR -->
+          <div class="form-card">
+            <h3 class="form-titulo">Agregar Programa</h3>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Nombre del programa <span class="requerido">*</span></label>
+                <input
+                  type="text"
+                  [(ngModel)]="nuevoPrograma.nombre_programa"
+                  placeholder="Ej. Programa de Apoyo Comunitario"
+                  class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Organización <span class="requerido">*</span></label>
+                <select [(ngModel)]="nuevoPrograma.id_organizacion" class="form-input">
+                  <option [ngValue]="0" disabled>Selecciona una organización</option>
+                  <option *ngFor="let org of organizaciones" [ngValue]="org.id">
+                    {{ org.nombreOrganizacion }}
+                  </option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Tipo de programa <span class="requerido">*</span></label>
+                <select [(ngModel)]="nuevoPrograma.id_tipo_programa" class="form-input">
+                  <option [ngValue]="0" disabled>Selecciona un tipo</option>
+                  <option *ngFor="let tipo of tiposProgramas" [ngValue]="tipo.id">
+                    {{ tipo.nombreTipo }}
+                  </option>
+                </select>
+              </div>
+              <div class="form-group">
+                <label>Modalidad</label>
+                <select [(ngModel)]="nuevoPrograma.modalidad" class="form-input">
+                  <option [ngValue]="true">Interno</option>
+                  <option [ngValue]="false">Externo</option>
+                </select>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Fecha inicio</label>
+                <input
+                  type="date"
+                  [(ngModel)]="nuevoPrograma.fecha_inicio_servicio"
+                  class="form-input">
+              </div>
+              <div class="form-group">
+                <label>Fecha fin</label>
+                <input
+                  type="date"
+                  [(ngModel)]="nuevoPrograma.fecha_fin_servicio"
+                  class="form-input">
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group form-group-full">
+                <label>Lista de actividades <span class="requerido">*</span></label>
+                <textarea
+                  [(ngModel)]="nuevoPrograma.lista_actividades"
+                  placeholder="Describe las actividades del programa..."
+                  class="form-input form-textarea"
+                  rows="3">
+                </textarea>
+              </div>
+            </div>
+
+            <div class="form-row">
+              <div class="form-group">
+                <label>Plan de trabajo (PDF)</label>
+                <input
+                  type="file"
+                  accept=".pdf"
+                  (change)="seleccionarPlanTrabajo($event)"
+                  class="form-input-file">
+                <small class="hint-programa">Archivo PDF opcional.</small>
+              </div>
+            </div>
+
+            <p *ngIf="errorPrograma" class="form-error">{{ errorPrograma }}</p>
+            <p *ngIf="exitoPrograma" class="form-exito">{{ exitoPrograma }}</p>
+
+            <div class="form-acciones">
+              <button class="btn-agregar" (click)="agregarPrograma()" [disabled]="guardandoPrograma">
+                {{ guardandoPrograma ? 'Guardando...' : '+ Agregar Programa' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- LISTA PROGRAMAS -->
+          <div class="lista-header">
+            <h3>Programas registrados</h3>
+          </div>
+
+          <div *ngIf="cargandoProgramas" class="cargando-docs">Cargando programas...</div>
+
+          <div *ngIf="!cargandoProgramas && programas.length === 0" class="estado-vacio">
+            No hay programas registrados aún.
+          </div>
+
+          <div *ngIf="!cargandoProgramas && programas.length > 0" class="items-grid">
+            <div *ngFor="let prog of programas" class="item-card">
+              <div class="item-card-body">
+                <div class="item-icon">📋</div>
+                <div class="item-info">
+                  <h4>{{ prog.nombrePrograma }}</h4>
+                  <p class="item-detalle">
+                    🏢 {{ getNombreOrganizacion(prog.idOrganizacion) }}
+                  </p>
+                  <p class="item-detalle">
+                    🗂️ {{ getNombreTipoPrograma(prog.idTipoPrograma) }}
+                  </p>
+                  <p class="item-detalle">
+                    📡 {{ prog.modalidad ? 'Interno' : 'Externo' }}
+                  </p>
+                  <p *ngIf="prog.fechaInicioServicio" class="item-detalle">
+                    📅 {{ prog.fechaInicioServicio | date:'dd/MM/yyyy' }}
+                    — {{ prog.fechaFinServicio | date:'dd/MM/yyyy' }}
+                  </p>
+                  <p class="item-detalle">📝 {{ prog.listaActividades }}</p>
+                </div>
+              </div>
+              <div class="item-acciones">
+                <button
+                  *ngIf="prog.planTrabajo"
+                  class="btn-ver"
+                  (click)="verPlanTrabajo(prog.id)">
+                  👁️ Ver PDF
+                </button>
+                <button
+                  class="btn-eliminar"
+                  (click)="eliminarPrograma(prog.id)"
+                  [disabled]="eliminandoPrograma === prog.id">
+                  {{ eliminandoPrograma === prog.id ? '⏳ Eliminando...' : '🗑️ Eliminar' }}
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
       </div>
     </main>
   </div>

@@ -2,6 +2,9 @@ import { Component, OnInit, ChangeDetectorRef } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { HttpClient, HttpHeaders } from '@angular/common/http';
+import { OrganizacionesService, Organizacion, CrearOrganizacionDto } from '../../Service/organizaciones.service';
+import { ProgramasService, Programa, CrearProgramaDto } from '../../Service/programas.service';
+import { TiposProgramasService, TipoPrograma } from '../../Service/tipos_programas.service';
 
 interface DocumentoAlumno {
   id: number;
@@ -24,28 +27,63 @@ export class PanelSuperAdminComponent implements OnInit {
 
   readonly apiUrl = 'http://localhost:3000';
 
-  // Credenciales reales del backend (cuenta de alumno usada como admin)
   private readonly ADMIN_NO_CONTROL = '21041305';
   private readonly ADMIN_NIP = '1234';
-
-  // Credenciales visuales del panel (lo que escribe el gerente)
   private readonly VISTA_USUARIO = 'a';
   private readonly VISTA_PASSWORD = '1';
 
-  // LOGIN
-  sesionIniciada: boolean = false;
-  loginError: string = '';
+  // ── Login ──────────────────────────────────────────────────────────────────
+  sesionIniciada = false;
+  loginError = '';
   credenciales = { usuario: '', password: '' };
-  token: string = '';
+  token = '';
 
-  // DOCUMENTOS
+  // ── Navegación ────────────────────────────────────────────────────────────
+  seccionActual = 'inicio';
+
+  // ── Documentación ─────────────────────────────────────────────────────────
   documentos: DocumentoAlumno[] = [];
-  cargando: boolean = false;
-  errorCarga: string = '';
+  cargando = false;
+  errorCarga = '';
+
+  // ── Organizaciones ────────────────────────────────────────────────────────
+  organizaciones: Organizacion[] = [];
+  cargandoOrganizaciones = false;
+  guardandoOrganizacion = false;
+  eliminandoOrganizacion: number | null = null;
+  errorOrganizacion = '';
+  exitoOrganizacion = '';
+  nuevaOrganizacion: CrearOrganizacionDto = {
+    nombre_organizacion: '',              // cambiado
+    nombre_titular_organizacion: '',      // cambiado
+    puesto_titular_organizaciones: ''     // cambiado
+  };
+
+  // ── Programas ─────────────────────────────────────────────────────────────
+  programas: Programa[] = [];
+  tiposProgramas: TipoPrograma[] = [];
+  cargandoProgramas = false;
+  guardandoPrograma = false;
+  eliminandoPrograma: number | null = null;
+  errorPrograma = '';
+  exitoPrograma = '';
+  planTrabajoSeleccionado: File | undefined = undefined;
+  nuevoPrograma: CrearProgramaDto = {
+    id_organizacion: 0,              // cambiado
+    id_tipo_programa: 0,             // cambiado
+    nombre_programa: '',             // cambiado
+    modalidad: true,
+    fecha_inicio_servicio: '',       // cambiado
+    fecha_fin_servicio: '',          // cambiado
+    lista_actividades: ''            // cambiado
+  };
 
   constructor(
     private http: HttpClient,
-    private cdr: ChangeDetectorRef
+    private cdr: ChangeDetectorRef,
+    private organizacionesService: OrganizacionesService,
+    private programasService: ProgramasService,
+    private tiposProgramasService: TiposProgramasService
   ) {}
 
   ngOnInit(): void {
@@ -53,9 +91,12 @@ export class PanelSuperAdminComponent implements OnInit {
     if (tokenGuardado) {
       this.token = tokenGuardado;
       this.sesionIniciada = true;
-      this.cargarDocumentos();
+      this.cargarTodo();
     }
+    this.salir();
   }
+
+  // ── Auth ──────────────────────────────────────────────────────────────────
 
   login() {
     this.loginError = '';
@@ -77,7 +118,7 @@ export class PanelSuperAdminComponent implements OnInit {
         this.token = res.access_token;
         localStorage.setItem('admin_token', res.access_token);
         this.sesionIniciada = true;
-        this.cargarDocumentos();
+        this.cargarTodo();
         this.cdr.detectChanges();
       },
       error: () => {
@@ -86,6 +127,46 @@ export class PanelSuperAdminComponent implements OnInit {
       }
     });
   }
+
+  salir() {
+    localStorage.removeItem('admin_token');
+    this.token = '';
+    this.sesionIniciada = false;
+    this.documentos = [];
+    this.organizaciones = [];
+    this.programas = [];
+    this.credenciales = { usuario: '', password: '' };
+    this.seccionActual = 'inicio';
+    this.cdr.detectChanges();
+  }
+
+  // ── Navegación ────────────────────────────────────────────────────────────
+
+  cambiarSeccion(seccion: string) {
+    this.seccionActual = seccion;
+    this.cdr.detectChanges();
+  }
+
+  getTituloHeader(): string {
+    const titulos: Record<string, string> = {
+      inicio: 'Panel de Control',
+      documentacion: 'Documentación',
+      organizaciones: 'Organizaciones',
+      programas: 'Programas de Servicio Social'
+    };
+    return titulos[this.seccionActual] ?? '';
+  }
+
+  // ── Carga inicial ─────────────────────────────────────────────────────────
+
+  cargarTodo() {
+    this.cargarDocumentos();
+    this.cargarOrganizaciones();
+    this.cargarProgramas();
+    this.cargarTiposProgramas();
+  }
+
+  // ── Documentación ─────────────────────────────────────────────────────────
 
   cargarDocumentos() {
     this.cargando = true;
@@ -129,12 +210,182 @@ export class PanelSuperAdminComponent implements OnInit {
     ].filter(Boolean).length;
   }
 
-  salir() {
-    localStorage.removeItem('admin_token');
-    this.token = '';
-    this.sesionIniciada = false;
-    this.documentos = [];
-    this.credenciales = { usuario: '', password: '' };
-    this.cdr.detectChanges();
+  contarAlumnosCompletos(): number {
+    return this.documentos.filter(d => this.documentosCompletos(d)).length;
+  }
+
+  // ── Organizaciones ────────────────────────────────────────────────────────
+
+  cargarOrganizaciones() {
+    this.cargandoOrganizaciones = true;
+    this.organizacionesService.obtenerTodos().subscribe({
+      next: (res) => {
+        this.organizaciones = res;
+        this.cargandoOrganizaciones = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cargandoOrganizaciones = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+
+
+
+
+  agregarOrganizacion() {
+    this.errorOrganizacion = '';
+    this.exitoOrganizacion = '';
+
+    if (!this.nuevaOrganizacion.nombre_organizacion.trim()) {
+      this.errorOrganizacion = 'El nombre de la organización es requerido.';
+      return;
+    }
+
+    this.guardandoOrganizacion = true;
+
+    this.organizacionesService.crear(this.nuevaOrganizacion).subscribe({
+      next: (res) => {
+        this.organizaciones.push(res);
+        this.nuevaOrganizacion = { nombre_organizacion: '', nombre_titular_organizacion: '', puesto_titular_organizaciones: '' };
+        this.exitoOrganizacion = 'Organización agregada correctamente.';
+        this.guardandoOrganizacion = false;
+        setTimeout(() => { this.exitoOrganizacion = ''; this.cdr.detectChanges(); }, 3000);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorOrganizacion = 'Error al guardar la organización.';
+        this.guardandoOrganizacion = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  eliminarOrganizacion(id: number) {
+    this.eliminandoOrganizacion = id;
+    this.organizacionesService.eliminarPorId(id).subscribe({
+      next: () => {
+        this.organizaciones = this.organizaciones.filter(o => o.id !== id);
+        this.eliminandoOrganizacion = null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.eliminandoOrganizacion = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  // ── Tipos de Programa ─────────────────────────────────────────────────────
+
+  cargarTiposProgramas() {
+    this.tiposProgramasService.obtenerTodos().subscribe({
+      next: (res) => {
+        this.tiposProgramas = res;
+        this.cdr.detectChanges();
+      },
+      error: () => this.cdr.detectChanges()
+    });
+  }
+
+  getNombreTipoPrograma(id: number): string {
+    return this.tiposProgramas.find(t => t.id === id)?.nombreTipo ?? `Tipo ${id}`;
+  }
+
+  // ── Programas ─────────────────────────────────────────────────────────────
+
+  cargarProgramas() {
+    this.cargandoProgramas = true;
+    this.programasService.obtenerTodos().subscribe({
+      next: (res) => {
+        this.programas = res;
+        this.cargandoProgramas = false;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.cargandoProgramas = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  seleccionarPlanTrabajo(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.planTrabajoSeleccionado = input.files?.[0];
+  }
+
+  agregarPrograma() {
+    this.errorPrograma = '';
+    this.exitoPrograma = '';
+
+    if (!this.nuevoPrograma.nombre_programa.trim()) {
+      this.errorPrograma = 'El nombre del programa es requerido.';
+      return;
+    }
+    if (!this.nuevoPrograma.id_organizacion) {
+      this.errorPrograma = 'Selecciona una organización.';
+      return;
+    }
+    if (!this.nuevoPrograma.id_tipo_programa) {
+      this.errorPrograma = 'Selecciona un tipo de programa.';
+      return;
+    }
+    if (!this.nuevoPrograma.lista_actividades.trim()) {
+      this.errorPrograma = 'La lista de actividades es requerida.';
+      return;
+    }
+
+    this.guardandoPrograma = true;
+
+    this.programasService.crear(this.nuevoPrograma, this.planTrabajoSeleccionado).subscribe({
+      next: (res) => {
+        this.programas.push(res);
+        this.nuevoPrograma = {
+          id_organizacion: 0,
+          id_tipo_programa: 0,
+          nombre_programa: '',
+          modalidad: true,
+          fecha_inicio_servicio: '',
+          fecha_fin_servicio: '',
+          lista_actividades: ''
+        };
+        this.planTrabajoSeleccionado = undefined;
+        this.exitoPrograma = 'Programa agregado correctamente.';
+        this.guardandoPrograma = false;
+        setTimeout(() => { this.exitoPrograma = ''; this.cdr.detectChanges(); }, 3000);
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.errorPrograma = 'Error al guardar el programa.';
+        this.guardandoPrograma = false;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  eliminarPrograma(id: number) {
+    this.eliminandoPrograma = id;
+    this.programasService.eliminar(id).subscribe({
+      next: () => {
+        this.programas = this.programas.filter(p => p.id !== id);
+        this.eliminandoPrograma = null;
+        this.cdr.detectChanges();
+      },
+      error: () => {
+        this.eliminandoPrograma = null;
+        this.cdr.detectChanges();
+      }
+    });
+  }
+
+  verPlanTrabajo(id: number) {
+    const url = `${this.apiUrl}/servicio-social/programas/id/${id}/plan-trabajo`;
+    window.open(url, '_blank');
+  }
+
+  getNombreOrganizacion(id: number): string {
+    return this.organizaciones.find(o => o.id === id)?.nombreOrganizacion ?? `Org. ${id}`;
   }
 }
