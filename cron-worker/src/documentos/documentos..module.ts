@@ -1,6 +1,7 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { DocumentosService } from './documentos.service';
+import { CronService } from './cron.service';
 import { SsDocumentosAlumnosEntity } from './entities/ss_documentos_alumnos.entity';
 import { AlumnoDatosAcademicosEntity } from './entities/alumnos_datos_academicos.entity';
 import { AlumnosDatosPersonalesEntity } from './entities/alumnos_datos_personales.entity';
@@ -13,6 +14,7 @@ import { AlumnosDatosPersonalesEntity } from './entities/alumnos_datos_personale
       AlumnosDatosPersonalesEntity,
     ]),
   ],
-  providers: [DocumentosService],
+  providers: [DocumentosService, CronService],
+  exports: [DocumentosService],
 })
 export class DocumentosModule {}

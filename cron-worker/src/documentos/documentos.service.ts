@@ -8,6 +8,7 @@ import { AlumnosDatosPersonalesEntity } from './entities/alumnos_datos_personale
 @Injectable()
 export class DocumentosService {
   private readonly logger = new Logger(DocumentosService.name);
+  private replicaStatusLogged = false;
 
   constructor(
     @InjectRepository(SsDocumentosAlumnosEntity)
@@ -18,43 +19,54 @@ export class DocumentosService {
 
     @InjectRepository(AlumnosDatosPersonalesEntity)
     private readonly personalesRepo: Repository<AlumnosDatosPersonalesEntity>,
-  ) {}
+  ) {
+    this.logger.log('Conectado a BD réplica');
+  }
 
   async verificarDocumentosPendientes(): Promise<void> {
-    this.logger.log('=== Iniciando verificación de documentos pendientes ===');
+    try {
+      const conPendientes = await this.documentosRepo.find({
+        where: [
+          { carta_presentacion: IsNull() },
+          { carta_compromiso: IsNull() },
+          { carta_aceptacion: IsNull() },
+          { seguro_facultativo: IsNull() },
+        ],
+      });
 
-    const conPendientes = await this.documentosRepo.find({
-      where: [
-        { carta_presentacion: IsNull() },
-        { carta_compromiso: IsNull() },
-        { carta_aceptacion: IsNull() },
-        { seguro_facultativo: IsNull() },
-      ],
-    });
+      if (!this.replicaStatusLogged) {
+        this.logger.log('BD réplica disponible');
+        this.replicaStatusLogged = true;
+      }
 
-    if (conPendientes.length === 0) {
-      this.logger.log('Todos los alumnos tienen sus documentos completos.');
-      return;
+      if (conPendientes.length === 0) {
+        return;
+      }
+
+      for (const registro of conPendientes) {
+        const nombreCompleto = await this.obtenerNombreAlumno(
+          registro.id_alumno_academico,
+        );
+
+        const faltantes = this.resolverDocumentosFaltantes(registro);
+
+        this.logger.warn(
+          `Alumno: ${nombreCompleto} | ` +
+          `Documentos pendientes: ${faltantes.join(', ')}`,
+        );
+      }
+
+    } catch (error) {
+      if (error.code === 'ECONNREFUSED' || error.message?.includes('replica')) {
+        if (this.replicaStatusLogged) {
+          this.logger.error('BD réplica detenida o caída');
+          this.replicaStatusLogged = false;
+        }
+        return;
+      }
+      
+      this.logger.error(`Error en verificación: ${error.message}`);
     }
-
-    for (const registro of conPendientes) {
-      const nombreCompleto = await this.obtenerNombreAlumno(
-        registro.id_alumno_academico,
-      );
-
-      const faltantes = this.resolverDocumentosFaltantes(registro);
-
-      this.logger.warn(
-        `Alumno: ${nombreCompleto} | ` +
-        `id_alumno_academico: ${registro.id_alumno_academico} | ` +
-        `Plan de trabajo: ${registro.id_plan_trabajo} | ` +
-        `Documentos pendientes: ${faltantes.join(', ')}`,
-      );
-    }
-
-    this.logger.log(
-      `=== Verificación completada: ${conPendientes.length} alumno(s) con documentos pendientes ===`,
-    );
   }
 
   private resolverDocumentosFaltantes(
@@ -81,6 +93,6 @@ export class DocumentosService {
 
     if (!personal) return `Sin datos personales (id_academico: ${idAlumnoAcademico})`;
 
-    return `${personal.nombre} ${personal.apellido_paterno} ${personal.apellido_materno ?? ''}`.trim();
+    return `${personal.nombre} ${personal.apellido_paterno}`;
   }
 }

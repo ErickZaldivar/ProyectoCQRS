@@ -47,7 +47,7 @@ services:
     build: ./cron-worker
     container_name: cron-worker
     depends_on:
-      - postgres-nest
+      - postgres-replica
     env_file:
       - .env
     networks:
@@ -55,6 +55,7 @@ services:
     mem_limit: 256m
     cpus: 0.5
     restart: unless-stopped
+    command: node dist/main.js
 
   postgres-nest:
     image: postgres:17
