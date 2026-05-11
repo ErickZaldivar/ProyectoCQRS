@@ -23,11 +23,11 @@ public static class InfrastructureServiceExtensions
 
     private static string ObtenerCadenaConexion()
     {
-        string dbHost     = Environment.GetEnvironmentVariable("DB_HOST")     ?? "localhost";
-        string dbPort     = Environment.GetEnvironmentVariable("DB_PORT")     ?? "5432";
-        string dbName     = Environment.GetEnvironmentVariable("DB_NAME")     ?? string.Empty;
-        string dbUser     = Environment.GetEnvironmentVariable("DB_USER")     ?? string.Empty;
-        string dbPassword = Environment.GetEnvironmentVariable("DB_PASSWORD") ?? string.Empty;
+        string dbHost     = Environment.GetEnvironmentVariable("DB_DOTNET_HOST")     ?? "localhost";
+        string dbPort     = Environment.GetEnvironmentVariable("DB_DOTNET_PORT")     ?? "5432";
+        string dbName     = Environment.GetEnvironmentVariable("DB_DOTNET_NAME")     ?? string.Empty;
+        string dbUser     = Environment.GetEnvironmentVariable("DB_DOTNET_USER")     ?? string.Empty;
+        string dbPassword = Environment.GetEnvironmentVariable("DB_DOTNET_PASSWORD") ?? string.Empty;
 
         return $"Host={dbHost};Port={dbPort};Database={dbName};Username={dbUser};Password={dbPassword}";
     }
