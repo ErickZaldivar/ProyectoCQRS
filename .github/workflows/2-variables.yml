@@ -1,0 +1,137 @@
+# ============================================================
+# PIPELINE 2 — USO DE VARIABLES
+#
+# PROPÓSITO: Demostrar los 4 tipos de variables que existen
+# en GitHub Actions y cómo se usan en la práctica.
+# ============================================================
+
+name: "Pipeline 2 - Variables"
+
+on:
+  push:
+    branches:
+      - master
+  # También se puede disparar manualmente desde GitHub UI:
+  workflow_dispatch:
+
+# ------------------------------------------------------------
+# TIPO 1: Variables de entorno globales (env a nivel workflow)
+# - Definidas fuera de los jobs
+# - Disponibles en TODOS los jobs y steps
+# - Para valores NO sensibles
+# ------------------------------------------------------------
+env:
+  APP_NAME: "cqrs-project"
+  APP_VERSION: "1.0.0"
+  NODE_ENV: "ci"
+
+jobs:
+  demo-variables:
+    name: "Demostración de variables"
+    runs-on: ubuntu-latest
+
+    # ----------------------------------------------------------
+    # TIPO 2: Variables de entorno locales (env a nivel job)
+    # - Definidas dentro de un job específico
+    # - Solo disponibles en los steps de ESTE job
+    # ----------------------------------------------------------
+    env:
+      API_NEST_PORT: "3000"
+      API_DOTNET_PORT: "5000"
+
+    steps:
+
+      - name: "Checkout del código"
+        uses: actions/checkout@v4
+
+      # PASO 1 ------------------------------------------------
+      # Mostrar variables globales del workflow (TIPO 1)
+      - name: "🌍 TIPO 1 - Variables globales del workflow"
+        run: |
+          echo "================================================"
+          echo "  VARIABLES GLOBALES (nivel workflow)"
+          echo "================================================"
+          echo "  APP_NAME    = $APP_NAME"
+          echo "  APP_VERSION = $APP_VERSION"
+          echo "  NODE_ENV    = $NODE_ENV"
+          echo "================================================"
+
+      # PASO 2 ------------------------------------------------
+      # Mostrar variables locales del job (TIPO 2)
+      - name: "📦 TIPO 2 - Variables locales del job"
+        run: |
+          echo "================================================"
+          echo "  VARIABLES LOCALES (nivel job)"
+          echo "================================================"
+          echo "  API_NEST_PORT   = $API_NEST_PORT"
+          echo "  API_DOTNET_PORT = $API_DOTNET_PORT"
+          echo "================================================"
+
+      # PASO 3 ------------------------------------------------
+      # Variables predefinidas de GitHub (TIPO 3)
+      # GitHub las inyecta automáticamente en cada ejecución.
+      # No necesitas definirlas, siempre están disponibles.
+      # Documentación: https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/store-information-in-variables#default-environment-variables
+      - name: "🐙 TIPO 3 - Variables predefinidas de GitHub"
+        run: |
+          echo "================================================"
+          echo "  VARIABLES PREDEFINIDAS DE GITHUB"
+          echo "================================================"
+          echo "  Repositorio   = $GITHUB_REPOSITORY"
+          echo "  Usuario       = $GITHUB_ACTOR"
+          echo "  Rama          = $GITHUB_REF_NAME"
+          echo "  Commit SHA    = $GITHUB_SHA"
+          echo "  Evento        = $GITHUB_EVENT_NAME"
+          echo "  Runner OS     = $RUNNER_OS"
+          echo "================================================"
+
+      # PASO 4 ------------------------------------------------
+      # Secrets (TIPO 4): valores SENSIBLES como contraseñas.
+      # - Se configuran en: Repo → Settings → Secrets → Actions
+      # - Se referencian con: ${{ secrets.NOMBRE }}
+      # - GitHub los enmascara en los logs automáticamente (***)
+      # - NUNCA los imprimas directamente con echo
+      - name: "🔒 TIPO 4 - Secrets (credenciales sensibles)"
+        run: |
+          echo "================================================"
+          echo "  SECRETS"
+          echo "================================================"
+          echo "  Los secrets NUNCA se muestran en logs."
+          echo "  GitHub los enmascara automáticamente."
+          echo ""
+          echo "  Verificando que el secret existe..."
+          if [ -n "$DB_USER" ]; then
+            echo "  ✅ POSTGRES_USER  → configurado correctamente"
+          else
+            echo "  ❌ POSTGRES_USER  → NO configurado"
+          fi
+          if [ -n "$DB_PASS" ]; then
+            echo "  ✅ POSTGRES_PASSWORD → configurado correctamente"
+          else
+            echo "  ❌ POSTGRES_PASSWORD → NO configurado"
+          fi
+          echo "================================================"
+        env:
+          # Así se pasan secrets a un step específico:
+          DB_USER: ${{ secrets.POSTGRES_USER }}
+          DB_PASS: ${{ secrets.POSTGRES_PASSWORD }}
+
+      # PASO 5 ------------------------------------------------
+      # Resumen final: tabla con todos los tipos vistos
+      - name: "📊 Resumen de tipos de variables"
+        run: |
+          echo ""
+          echo "╔══════════════════════════════════════════════════╗"
+          echo "║         RESUMEN - TIPOS DE VARIABLES             ║"
+          echo "╠══════════╦══════════════════╦════════════════════╣"
+          echo "║  TIPO    ║  DÓNDE SE DEFINE ║  ALCANCE           ║"
+          echo "╠══════════╬══════════════════╬════════════════════╣"
+          echo "║ Global   ║ Fuera de jobs    ║ Todo el workflow   ║"
+          echo "║ Local    ║ Dentro del job   ║ Solo ese job       ║"
+          echo "║ GitHub   ║ Automáticas      ║ Todo el workflow   ║"
+          echo "║ Secrets  ║ UI de GitHub     ║ Todo el workflow   ║"
+          echo "╚══════════╩══════════════════╩════════════════════╝"
+          echo ""
+          echo "  Proyecto : $APP_NAME v$APP_VERSION"
+          echo "  Rama     : $GITHUB_REF_NAME"
+          echo "  Commit   : $GITHUB_SHA"

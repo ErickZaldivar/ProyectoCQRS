@@ -1,0 +1,81 @@
+# ============================================================
+# PIPELINE 1 — BUILD
+# Archivo: .github/workflows/1-build.yml
+#
+# PROPÓSITO: Verificar que el proyecto compila y levanta
+# correctamente con Docker Compose.
+# ============================================================
+
+name: "Pipeline 1 - Build"
+
+on:
+  push:
+    branches:
+      - master
+  pull_request:
+    branches:
+      - master
+
+jobs:
+  build:
+    name: "Levantar y verificar servicios"
+    runs-on: ubuntu-latest
+
+    steps:
+
+      # PASO 1 ------------------------------------------------
+      # Descargar el código del repositorio en el runner.
+      - name: "Checkout del código"
+        uses: actions/checkout@v4
+
+      # PASO 2 ------------------------------------------------
+      # Verificar que Docker y Docker Compose están disponibles.
+      - name: "Verificar versión de Docker"
+        run: |
+          docker --version
+          docker compose version
+
+      # PASO 3 ------------------------------------------------
+      # Crear el archivo .env a partir del secret ENV_FILE.
+      # Esto es necesario porque api-nest, api-dotnet y
+      # cron-worker usan "env_file: .env" en el compose.
+      # Sin este paso, esos servicios no arrancan.
+      - name: "Crear archivo .env desde secret"
+        run: echo "${{ secrets.ENV_FILE }}" > .env
+
+      # PASO 4 ------------------------------------------------
+      # Levantar todos los servicios en modo detached (-d).
+      # Las variables individuales cubren lo que necesita
+      # el compose directamente (postgres, pgadmin).
+      - name: "Levantar servicios con Docker Compose"
+        run: docker compose up -d --build
+        env:
+          POSTGRES_USER: ${{ secrets.POSTGRES_USER }}
+          POSTGRES_PASSWORD: ${{ secrets.POSTGRES_PASSWORD }}
+          REPLICA_PASSWORD: ${{ secrets.REPLICA_PASSWORD }}
+          PGADMIN_EMAIL: ${{ secrets.PGADMIN_EMAIL }}
+          PGADMIN_PASSWORD: ${{ secrets.PGADMIN_PASSWORD }}
+
+      # PASO 5 ------------------------------------------------
+      # Esperar a que los servicios terminen de inicializar.
+      # 60s porque postgres-replica necesita conectarse al
+      # master y hacer pg_basebackup antes de arrancar.
+      - name: "Esperar inicialización de servicios (60s)"
+        run: sleep 60
+
+      # PASO 6 ------------------------------------------------
+      # Verificar que todos los contenedores están corriendo.
+      - name: "Verificar que los contenedores están activos"
+        run: docker compose ps
+
+      # PASO 7 ------------------------------------------------
+      # Si algo falló, mostrar logs para diagnosticar.
+      - name: "Mostrar logs si hubo error"
+        if: failure()
+        run: docker compose logs --tail=80
+
+      # PASO 8 ------------------------------------------------
+      # Limpieza: siempre se ejecuta al final.
+      - name: "Bajar servicios (limpieza)"
+        if: always()
+        run: docker compose down -v
