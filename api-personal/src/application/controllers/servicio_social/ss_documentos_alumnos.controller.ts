@@ -46,28 +46,45 @@ import { SsDocumentosAlumnosPresenter } from '../../presenters/servicio_social/s
 @UseGuards(JwtGuard)
 @Controller('servicio-social/documentos-alumnos')
 export class SsDocumentosAlumnosController {
+
   constructor(
     private readonly obtenerSsDocumentosAlumnosUseCase: ObtenerSsDocumentosAlumnos,
     private readonly crearSsDocumentosAlumnosUseCase: CrearSsDocumentosAlumnosUseCase,
     private readonly eliminarSsDocumentosAlumnosUseCase: EliminarSsDocumentosAlumnosUseCase,
     private readonly actualizarSsDocumentosAlumnosUseCase: ActualizarSsDocumentosAlumnosUseCase,
-    private readonly limpiarCampoSsDocumentosAlumnosUseCase: LimpiarCampoSsDocumentosAlumnosUseCase, // 🆕
+    private readonly limpiarCampoSsDocumentosAlumnosUseCase: LimpiarCampoSsDocumentosAlumnosUseCase,
   ) {}
 
-  // 🔐 VALIDACIÓN DE ARCHIVOS
   private validarArchivo(file: Express.Multer.File) {
-    const allowed = [
-      'application/pdf',
-      'application/msword',
-      'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
-    ];
 
-    if (!allowed.includes(file.mimetype)) {
-      throw new BadRequestException('Solo se permiten archivos PDF, DOC o DOCX');
+    // Validar tamaño máximo 2MB
+    if (file.size > 2 * 1024 * 1024) {
+      throw new BadRequestException(
+        'El archivo excede el tamaño máximo permitido de 2MB',
+      );
     }
 
-    if (file.size > 2 * 1024 * 1024) {
-      throw new BadRequestException('El archivo excede el tamaño máximo de 2MB');
+    // Validar MIME type
+    if (file.mimetype !== 'application/pdf') {
+      throw new BadRequestException(
+        'Solo se permiten archivos PDF',
+      );
+    }
+
+    // Validar extensión
+    if (!file.originalname.toLowerCase().endsWith('.pdf')) {
+      throw new BadRequestException(
+        'La extensión del archivo debe ser .pdf',
+      );
+    }
+
+    // Validar firma binaria PDF (%PDF)
+    const header = file.buffer.toString('utf8', 0, 4);
+
+    if (header !== '%PDF') {
+      throw new BadRequestException(
+        'El archivo no es un PDF válido',
+      );
     }
   }
 
@@ -80,7 +97,9 @@ export class SsDocumentosAlumnosController {
 
   @Get('id/:id')
   @ApiOperation({ summary: 'Obtener documentos por id del registro' })
-  async ObtenerPorId(@Param('id', ParseIntPipe) id: number) {
+  async ObtenerPorId(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
     return this.obtenerSsDocumentosAlumnosUseCase.ObtenerPorId(id);
   }
 
@@ -100,57 +119,85 @@ export class SsDocumentosAlumnosController {
   }
 
   @Get('ver-carta-presentacion/:id')
-  async VerCartaPresentacion(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async VerCartaPresentacion(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const registro = await this.obtenerSsDocumentosAlumnosUseCase.ObtenerPorId(id);
 
     if (!registro?.carta_presentacion) {
       return res.status(404).send('No encontrado');
     }
 
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline' });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+    });
+
     return res.send(registro.carta_presentacion);
   }
 
   @Get('ver-carta-compromiso/:id')
-  async VerCartaCompromiso(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async VerCartaCompromiso(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const registro = await this.obtenerSsDocumentosAlumnosUseCase.ObtenerPorId(id);
 
     if (!registro?.carta_compromiso) {
       return res.status(404).send('No encontrado');
     }
 
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline' });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+    });
+
     return res.send(registro.carta_compromiso);
   }
 
   @Get('ver-carta-aceptacion/:id')
-  async VerCartaAceptacion(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async VerCartaAceptacion(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const registro = await this.obtenerSsDocumentosAlumnosUseCase.ObtenerPorId(id);
 
     if (!registro?.carta_aceptacion) {
       return res.status(404).send('No encontrado');
     }
 
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline' });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+    });
+
     return res.send(registro.carta_aceptacion);
   }
 
   @Get('ver-seguro-facultativo/:id')
-  async VerSeguro(@Param('id', ParseIntPipe) id: number, @Res() res: Response) {
+  async VerSeguro(
+    @Param('id', ParseIntPipe) id: number,
+    @Res() res: Response,
+  ) {
     const registro = await this.obtenerSsDocumentosAlumnosUseCase.ObtenerPorId(id);
 
     if (!registro?.seguro_facultativo) {
       return res.status(404).send('No encontrado');
     }
 
-    res.set({ 'Content-Type': 'application/pdf', 'Content-Disposition': 'inline' });
+    res.set({
+      'Content-Type': 'application/pdf',
+      'Content-Disposition': 'inline',
+    });
+
     return res.send(registro.seguro_facultativo);
   }
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Subir documentos' })
+  @ApiOperation({ summary: 'Subir documentos PDF seguros' })
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -159,11 +206,17 @@ export class SsDocumentosAlumnosController {
         { name: 'carta_aceptacion', maxCount: 1 },
         { name: 'seguro_facultativo', maxCount: 1 },
       ],
-      { storage: memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } },
+      {
+        storage: memoryStorage(),
+        limits: {
+          fileSize: 2 * 1024 * 1024,
+        },
+      },
     ),
   )
   async Crear(
     @Body() dto: CrearSsDocumentosAlumnosDto,
+
     @UploadedFiles()
     files: {
       carta_presentacion?: Express.Multer.File[];
@@ -172,6 +225,7 @@ export class SsDocumentosAlumnosController {
       seguro_facultativo?: Express.Multer.File[];
     },
   ) {
+
     Object.values(files || {}).forEach((arr) => {
       arr?.forEach((file) => this.validarArchivo(file));
     });
@@ -181,7 +235,10 @@ export class SsDocumentosAlumnosController {
 
   @Delete('id/:id')
   @ApiOperation({ summary: 'Eliminar registro completo' })
-  async Eliminar(@Param('id', ParseIntPipe) id: number) {
+  async Eliminar(
+    @Param('id', ParseIntPipe) id: number,
+  ) {
+
     await this.eliminarSsDocumentosAlumnosUseCase.Ejecutar(id);
 
     return {
@@ -192,7 +249,7 @@ export class SsDocumentosAlumnosController {
 
   @Put('id/:id')
   @ApiConsumes('multipart/form-data')
-  @ApiOperation({ summary: 'Actualizar documentos' })
+  @ApiOperation({ summary: 'Actualizar documentos PDF seguros' })
   @UseInterceptors(
     FileFieldsInterceptor(
       [
@@ -201,12 +258,19 @@ export class SsDocumentosAlumnosController {
         { name: 'carta_aceptacion', maxCount: 1 },
         { name: 'seguro_facultativo', maxCount: 1 },
       ],
-      { storage: memoryStorage(), limits: { fileSize: 2 * 1024 * 1024 } },
+      {
+        storage: memoryStorage(),
+        limits: {
+          fileSize: 2 * 1024 * 1024,
+        },
+      },
     ),
   )
   async Actualizar(
     @Param('id', ParseIntPipe) id: number,
+
     @Body() dto: ActualizarSsDocumentosAlumnosDto,
+
     @UploadedFiles()
     files: {
       carta_presentacion?: Express.Multer.File[];
@@ -215,22 +279,32 @@ export class SsDocumentosAlumnosController {
       seguro_facultativo?: Express.Multer.File[];
     },
   ) {
+
     Object.values(files || {}).forEach((arr) => {
       arr?.forEach((file) => this.validarArchivo(file));
     });
 
-    const result = await this.actualizarSsDocumentosAlumnosUseCase.Ejecutar(id, dto, files);
+    const result =
+      await this.actualizarSsDocumentosAlumnosUseCase.Ejecutar(
+        id,
+        dto,
+        files,
+      );
+
     return SsDocumentosAlumnosPresenter.Presentar(result);
   }
 
-  // 🆕
   @Patch('limpiar-campo/:id')
-  @ApiOperation({ summary: 'Limpiar un campo de documento individual (ponerlo en null)' })
+  @ApiOperation({
+    summary: 'Limpiar un campo de documento individual',
+  })
   @HttpCode(HttpStatus.OK)
   async LimpiarCampo(
     @Param('id', ParseIntPipe) id: number,
+
     @Body() dto: LimpiarCampoSsDocumentosAlumnosDto,
   ) {
+
     await this.limpiarCampoSsDocumentosAlumnosUseCase.Ejecutar(id, dto);
 
     return {

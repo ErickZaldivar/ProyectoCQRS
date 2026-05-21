@@ -10,7 +10,7 @@ import { ActualizarSsOrganizacionUseCase } from '../../logic/servicio_Social/Org
 
 @ApiTags('Servicio Social - Organizaciones')
 @ApiBearerAuth('access-token')
-@UseGuards(JwtGuard)
+//@UseGuards(JwtGuard)
 @Controller('servicio-social/organizaciones')
 export class SsOrganizacionesController {
 
